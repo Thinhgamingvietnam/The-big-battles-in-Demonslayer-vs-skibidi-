@@ -2891,5 +2891,446 @@ doSp=function(f,e){const i=f.spi|0;if(i<SP0)return _dS(f,e);if(tick<f.spT)return
 /* trang phục nhân vật */
 const B2=ARN.length,SK2=[['Nezuko','#f08ab4','#e86a9c','#2a1a22','dot','bamboo'],
 
+TitanTVMan.cs
+
+ TitanCombat.cs
+
+ EnemyHealth.cs
+
+ BlackSmokePortal.cs
+README.md
+
+.gitignore
+</script>
+</body>
+</html>
+TitanTVMan.cs
+Assets/Scripts/
+using UnityEngine;
+
+[RequireComponent(typeof(CharacterController))]
+public class TitanTVMan : MonoBehaviour
+{
+    [Header("Titan Stats")]
+    public float maxHealth = 5000f;
+    public float moveSpeed = 6f;
+    public float rotationSpeed = 120f;
+
+    public float Health { get; private set; }
+
+    private CharacterController controller;
+
+    public bool IsDead { get; private set; }
+
+    private void Awake()
+    {
+        controller = GetComponent<CharacterController>();
+        Health = maxHealth;
+    }
+
+    private void Update()
+    {
+        if (IsDead) return;
+
+        // Di chuyen bang WASD hoac phim mui ten
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
+
+        Vector3 move = transform.right * x
+                     + transform.forward * z;
+
+        controller.Move(
+            move * moveSpeed * Time.deltaTime
+        );
+
+        // Xoay Titan bang Q va E
+        if (Input.GetKey(KeyCode.E))
+            transform.Rotate(
+                Vector3.up * rotationSpeed * Time.deltaTime
+            );
+
+        if (Input.GetKey(KeyCode.Q))
+            transform.Rotate(
+                Vector3.up * -rotationSpeed * Time.deltaTime
+            );
+    }
+
+    public void TakeDamage(float damage)
+    {
+        if (IsDead || damage <= 0f) return;
+
+        Health = Mathf.Max(0f, Health - damage);
+
+        Debug.Log($"Titan HP: {Health}/{maxHealth}");
+
+        if (Health <= 0f)
+        {
+            IsDead = true;
+            Debug.Log("Titan TV Man da bi danh bai!");
+        }
+    }
+
+    public void Heal(float amount)
+    {
+        if (IsDead || amount <= 0f) return;
+
+        Health = Mathf.Min(maxHealth, Health + amount);
+    }
+}
+TitanCombat.cs
+using UnityEngine;
+
+public class TitanCombat : MonoBehaviour
+{
+    [Header("3 Speaker Transforms")]
+    public Transform centerSpeaker;
+    public Transform leftSpeaker;
+    public Transform rightSpeaker;
+
+    [Header("2 Side Screens")]
+    public Transform leftScreen;
+    public Transform rightScreen;
+
+    [Header("Damage")]
+    public float punchDamage = 150f;
+    public float soundDamage = 250f;
+    public float plasmaDamage = 350f;
+    public float ultimateDamage = 1000f;
+
+    [Header("Attack Ranges")]
+    public float punchRange = 4f;
+    public float soundRange = 10f;
+    public float plasmaRange = 30f;
+    public float ultimateRange = 20f;
+
+    [Header("Cooldowns")]
+    public float soundCooldown = 3f;
+    public float plasmaCooldown = 2f;
+    public float ultimateCooldown = 12f;
+
+    [Header("Optional Projectile Prefabs")]
+    public GameObject soundWavePrefab;
+    public GameObject plasmaPrefab;
+    public GameObject ultimateEffectPrefab;
+
+    private float nextSoundTime;
+    private float nextPlasmaTime;
+    private float nextUltimateTime;
+    private TitanTVMan titan;
+
+    private void Awake()
+    {
+        titan = GetComponent<TitanTVMan>();
+    }
+
+    private void Update()
+    {
+        if (titan != null && titan.IsDead) return;
+
+        if (Input.GetKeyDown(KeyCode.J))
+            PunchAttack();
+
+        if (Input.GetKeyDown(KeyCode.K))
+            SoundWaveAttack();
+
+        if (Input.GetKeyDown(KeyCode.L))
+            PlasmaAttack();
+
+        if (Input.GetKeyDown(KeyCode.R))
+            UltimateAttack();
+    }
+
+    // J: Dam can chien
+    public void PunchAttack()
+    {
+        DealAreaDamage(
+            transform.position + transform.forward * 2f,
+            punchRange,
+            punchDamage
+        );
+    }
+
+    // K: Ca 3 loa phat song am
+    public void SoundWaveAttack()
+    {
+        if (Time.time < nextSoundTime) return;
+        nextSoundTime = Time.time + soundCooldown;
+
+        SpawnEffect(centerSpeaker, soundWavePrefab);
+        SpawnEffect(leftSpeaker, soundWavePrefab);
+        SpawnEffect(rightSpeaker, soundWavePrefab);
+
+        DealAreaDamage(
+            transform.position + transform.forward * 5f,
+            soundRange,
+            soundDamage
+        );
+    }
+
+    // L: Hai man hinh ban plasma
+    public void PlasmaAttack()
+    {
+        if (Time.time < nextPlasmaTime) return;
+        nextPlasmaTime = Time.time + plasmaCooldown;
+
+        SpawnEffect(leftScreen, plasmaPrefab);
+        SpawnEffect(rightScreen, plasmaPrefab);
+
+        // Ban theo huong nhin cua Titan
+        DealAreaDamage(
+            transform.position + transform.forward * 12f,
+            plasmaRange,
+            plasmaDamage
+        );
+    }
+
+    // R: Tuyet ky dien rong
+    public void UltimateAttack()
+    {
+        if (Time.time < nextUltimateTime) return;
+        nextUltimateTime = Time.time + ultimateCooldown;
+
+        if (ultimateEffectPrefab != null)
+        {
+            Instantiate(
+                ultimateEffectPrefab,
+                transform.position + transform.forward * 5f,
+                Quaternion.identity
+            );
+        }
+
+        DealAreaDamage(
+            transform.position + transform.forward * 5f,
+            ultimateRange,
+            ultimateDamage
+        );
+    }
+
+    private void SpawnEffect(
+        Transform origin,
+        GameObject prefab)
+    {
+        if (origin == null || prefab == null) return;
+
+        Instantiate(prefab, origin.position, origin.rotation);
+    }
+
+    private void DealAreaDamage(
+        Vector3 center,
+        float range,
+        float damage)
+    {
+        Collider[] hits = Physics.OverlapSphere(center, range);
+
+        foreach (Collider hit in hits)
+        {
+            EnemyHealth enemy =
+                hit.GetComponentInParent<EnemyHealth>();
+
+            if (enemy != null)
+                enemy.TakeDamage(damage);
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawWireSphere(
+            transform.position + transform.forward * 5f,
+            soundRange
+        );
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(
+            transform.position + transform.forward * 12f,
+            plasmaRange
+        );
+    }
+}
+
+BlackSmokePortal.cs
+using UnityEngine;
+using System.Collections;
+
+public class BlackSmokePortal : MonoBehaviour
+{
+    [Header("Portal Settings")]
+    public float teleportDistance = 15f;
+    public float cooldown = 5f;
+    public float disappearDuration = 0.35f;
+
+    [Header("Black Smoke Particle")]
+    public ParticleSystem smokeEffect;
+
+    private float nextTeleportTime;
+    private bool isTeleporting;
+    private CharacterController controller;
+
+    private void Awake()
+    {
+        controller = GetComponent<CharacterController>();
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F))
+            TryTeleport();
+    }
+
+    public void TryTeleport()
+    {
+        if (isTeleporting || Time.time < nextTeleportTime)
+            return;
+
+        StartCoroutine(TeleportRoutine());
+    }
+
+    private IEnumerator TeleportRoutine()
+    {
+        isTeleporting = true;
+        nextTeleportTime = Time.time + cooldown;
+
+        Vector3 destination =
+            transform.position
+            + transform.forward * teleportDistance;
+
+        // Giu do cao hien tai
+        destination.y = transform.position.y;
+
+        // Khong cho Titan dich chuyen vao vat can
+        Vector3 direction = (destination - transform.position).normalized;
+
+        if (Physics.Raycast(
+            transform.position + Vector3.up,
+            direction,
+            out RaycastHit hit,
+            teleportDistance))
+        {
+            destination = hit.point - direction * 1.5f;
+            destination.y = transform.position.y;
+        }
+
+        if (smokeEffect != null)
+        {
+            smokeEffect.transform.position = transform.position;
+            smokeEffect.Play();
+        }
+
+        // An mo hinh trong luc dich chuyen
+        Renderer[] renderers =
+            GetComponentsInChildren<Renderer>();
+
+        foreach (Renderer renderer in renderers)
+            renderer.enabled = false;
+
+        yield return new WaitForSeconds(disappearDuration);
+
+        if (controller != null)
+            controller.enabled = false;
+
+        transform.position = destination;
+
+        if (controller != null)
+            controller.enabled = true;
+
+        foreach (Renderer renderer in renderers)
+            renderer.enabled = true;
+
+        if (smokeEffect != null)
+        {
+            smokeEffect.transform.position = destination;
+            smokeEffect.Play();
+        }
+
+        isTeleporting = false;
+    }
+}
+
+EnemyHealth.cs
+using UnityEngine;
+
+public class EnemyHealth : MonoBehaviour
+{
+    public float maxHealth = 1000f;
+
+    public float Health { get; private set; }
+
+    private void Awake()
+    {
+        Health = maxHealth;
+    }
+
+    public void TakeDamage(float damage)
+    {
+        if (damage <= 0f || Health <= 0f) return;
+
+        Health = Mathf.Max(0f, Health - damage);
+
+        Debug.Log(
+            $"{gameObject.name} nhan {damage} sat thuong. " +
+            $"HP con lai: {Health}"
+        );
+
+        if (Health <= 0f)
+            Die();
+    }
+
+    private void Die()
+    {
+        Debug.Log($"{gameObject.name} da bi tieu diet!");
+        Destroy(gameObject);
+    }
+}
+
+README.md
+# Titan TV Man Upgraded
+
+A Unity 3D Titan character prototype built with C#.
+
+## Features
+
+- Giant Titan TV Man character
+- Three combat speakers
+- Two auxiliary plasma screens
+- Black smoke teleportation
+- Melee and area attacks
+- Ultimate energy explosion
+- Health and damage systems
+- Configurable attack cooldowns
+
+## Controls
+
+| Key | Action |
+|---|---|
+| W A S D | Move |
+| Q / E | Rotate |
+| J | Punch |
+| K | Triple Speaker Shockwave |
+| L | Dual Plasma Attack |
+| F | Black Smoke Teleport |
+| R | Ultimate Attack |
+
+## Installation
+
+1. Install Unity Hub.
+2. Create or open a Unity 3D project.
+3. Copy the scripts into Assets/Scripts/.
+4. Add a CharacterController to the Titan.
+5. Attach TitanTVMan, TitanCombat and
+   BlackSmokePortal to the Titan GameObject.
+6. Create and assign the speaker and screen transforms.
+7. Assign optional particle effect prefabs.
+8. Add EnemyHealth to enemy GameObjects.
+9. Press Play to test.
+
+## Requirements
+
+- Unity 3D
+- C#
+- A compatible Unity Input Manager configuration
+
+## License
+
+
 
  
