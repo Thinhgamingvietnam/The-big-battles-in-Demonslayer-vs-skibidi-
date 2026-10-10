@@ -1,3 +1,10 @@
+# Clone repo
+git clone https://github.com/Thinhgamingvietnam/The-big-battles-in-Demonslayer-vs-skibidi-.git
+cd The-big-battles-in-Demonslayer-vs-skibidi-
+
+# Mở file HTML trong trình duyệt
+# Windows: Double-click "project 1 demoslayer vs skibidi" 
+# hoặc right-click → Open with → Browser
 <!DOCTYPE html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>Stick Warriors — BO3 v44</title>
 <style>
